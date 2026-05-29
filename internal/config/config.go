@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // TencentCloudConfig 腾讯云配置结构体
@@ -27,35 +28,83 @@ type TencentCloudConfig struct {
 	MaxPrice         string   `json:"max_price"`
 }
 
-// LoadConfig 从配置文件加载腾讯云配置
+// LoadConfig 从配置文件和环境变量加载腾讯云配置
+// 优先级：环境变量 > JSON 配置文件
 func LoadConfig() (*TencentCloudConfig, error) {
-	// 获取当前可执行文件所在目录
-	exePath, err := os.Executable()
-	if err != nil {
-		return nil, fmt.Errorf("获取可执行文件路径失败: %w", err)
-	}
-	configPath := filepath.Join(filepath.Dir(exePath), "config", "tencentcloud.json")
-
-	// 如果可执行文件目录下没有配置文件，尝试使用源码目录
-	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		configPath = filepath.Join("config", "tencentcloud.json")
-	}
-
-	data, err := os.ReadFile(configPath)
-	if err != nil {
-		return nil, fmt.Errorf("读取配置文件失败: %w", err)
-	}
-
 	var cfg TencentCloudConfig
-	if err := json.Unmarshal(data, &cfg); err != nil {
-		return nil, fmt.Errorf("解析配置文件失败: %w", err)
+
+	// 1. 尝试从配置文件加载（文件不存在时不报错，允许纯环境变量模式）
+	configPath := findConfigPath()
+	if configPath != "" {
+		data, err := os.ReadFile(configPath)
+		if err != nil {
+			return nil, fmt.Errorf("读取配置文件失败: %w", err)
+		}
+
+		if err := json.Unmarshal(data, &cfg); err != nil {
+			return nil, fmt.Errorf("解析配置文件失败: %w", err)
+		}
 	}
+
+	// 2. 环境变量覆盖（环境变量优先级高于配置文件）
+	applyEnvOverrides(&cfg)
 
 	if cfg.SecretID == "" || cfg.SecretKey == "" {
-		return nil, fmt.Errorf("配置文件中 secret_id 或 secret_key 为空")
+		return nil, fmt.Errorf("secret_id 或 secret_key 未配置（需通过配置文件或环境变量 TENCENTCLOUD_SECRET_ID / TENCENTCLOUD_SECRET_KEY 提供）")
 	}
 
 	return &cfg, nil
+}
+
+// findConfigPath 查找配置文件路径
+func findConfigPath() string {
+	// 获取当前可执行文件所在目录
+	exePath, err := os.Executable()
+	if err == nil {
+		path := filepath.Join(filepath.Dir(exePath), "config", "tencentcloud.json")
+		if _, err := os.Stat(path); err == nil {
+			return path
+		}
+	}
+
+	// 尝试源码目录
+	if _, err := os.Stat(filepath.Join("config", "tencentcloud.json")); err == nil {
+		return filepath.Join("config", "tencentcloud.json")
+	}
+
+	return ""
+}
+
+// applyEnvOverrides 用环境变量覆盖配置（环境变量优先级更高）
+func applyEnvOverrides(cfg *TencentCloudConfig) {
+	// 字符串字段映射：环境变量名 → 配置字段指针
+	stringFields := map[string]*string{
+		"TENCENTCLOUD_SECRET_ID":     &cfg.SecretID,
+		"TENCENTCLOUD_SECRET_KEY":    &cfg.SecretKey,
+		"TENCENTCLOUD_REGION":        &cfg.Region,
+		"TENCENTCLOUD_DOMAIN":        &cfg.Domain,
+		"TENCENTCLOUD_SUBDOMAIN":     &cfg.Subdomain,
+		"TENCENTCLOUD_PRIVATE_IP":    &cfg.PrivateIP,
+		"TENCENTCLOUD_ZONE":          &cfg.Zone,
+		"TENCENTCLOUD_VPC_ID":        &cfg.VpcId,
+		"TENCENTCLOUD_SUBNET_ID":     &cfg.SubnetId,
+		"TENCENTCLOUD_INSTANCE_NAME": &cfg.InstanceName,
+		"TENCENTCLOUD_INSTANCE_TYPE": &cfg.InstanceType,
+		"TENCENTCLOUD_IMAGE_ID":      &cfg.ImageId,
+		"TENCENTCLOUD_KEY_ID":        &cfg.KeyId,
+		"TENCENTCLOUD_MAX_PRICE":     &cfg.MaxPrice,
+	}
+
+	for envKey, field := range stringFields {
+		if val := os.Getenv(envKey); val != "" {
+			*field = val
+		}
+	}
+
+	// 安全组列表：逗号分隔
+	if val := os.Getenv("TENCENTCLOUD_SECURITY_GROUP_IDS"); val != "" {
+		cfg.SecurityGroupIds = strings.Split(val, ",")
+	}
 }
 
 // PrintJSON 格式化输出JSON

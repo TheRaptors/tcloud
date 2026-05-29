@@ -25,7 +25,17 @@ my-project-golang/
 └── go.sum
 ```
 
-## 配置文件
+## 配置
+
+支持两种配置方式，优先级：**环境变量 > JSON 配置文件**。
+
+### 方式一：JSON 配置文件
+
+复制模板并编辑：
+
+```bash
+cp config/tencentcloud.json.example config/tencentcloud.json
+```
 
 编辑 `config/tencentcloud.json`：
 
@@ -63,6 +73,44 @@ my-project-golang/
 | image_id | 镜像 ID |
 | key_id | SSH 密钥 ID |
 | max_price | 竞价最高出价 |
+
+### 方式二：环境变量
+
+无需配置文件，所有字段均可通过环境变量设置（前缀 `TENCENTCLOUD_`）：
+
+| 环境变量 | 对应字段 |
+|---------|----------|
+| `TENCENTCLOUD_SECRET_ID` | secret_id |
+| `TENCENTCLOUD_SECRET_KEY` | secret_key |
+| `TENCENTCLOUD_REGION` | region |
+| `TENCENTCLOUD_DOMAIN` | domain |
+| `TENCENTCLOUD_SUBDOMAIN` | subdomain |
+| `TENCENTCLOUD_PRIVATE_IP` | private_ip |
+| `TENCENTCLOUD_ZONE` | zone |
+| `TENCENTCLOUD_VPC_ID` | vpc_id |
+| `TENCENTCLOUD_SUBNET_ID` | subnet_id |
+| `TENCENTCLOUD_SECURITY_GROUP_IDS` | security_group_ids（逗号分隔） |
+| `TENCENTCLOUD_INSTANCE_NAME` | instance_name |
+| `TENCENTCLOUD_INSTANCE_TYPE` | instance_type |
+| `TENCENTCLOUD_IMAGE_ID` | image_id |
+| `TENCENTCLOUD_KEY_ID` | key_id |
+| `TENCENTCLOUD_MAX_PRICE` | max_price |
+
+示例：
+
+```bash
+# 纯环境变量模式
+export TENCENTCLOUD_SECRET_ID=AKIDxxxxx
+export TENCENTCLOUD_SECRET_KEY=xxxxx
+export TENCENTCLOUD_REGION=ap-hongkong
+export TENCENTCLOUD_DOMAIN=example.com
+export TENCENTCLOUD_SUBDOMAIN=cvm
+./tcloud deploy
+
+# 混合模式：配置文件 + 环境变量覆盖个别字段
+export TENCENTCLOUD_MAX_PRICE=2000
+./tcloud deploy   # 其他字段从 JSON 读取，max_price 用环境变量
+```
 
 ## 编译
 
