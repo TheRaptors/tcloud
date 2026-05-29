@@ -1,0 +1,17 @@
+{
+    "secret_id": "你的 SecretId",
+    "secret_key": "你的 SecretKey",
+    "region": "ap-hongkong",
+    "domain": "example.com",
+    "subdomain": "cvm",
+    "private_ip": "172.19.0.100",
+    "zone": "ap-hongkong-2",
+    "vpc_id": "vpc-xxxxxx",
+    "subnet_id": "subnet-xxxxxx",
+    "security_group_ids": ["sg-xxxxxx"],
+    "instance_name": "未命名",
+    "instance_type": "MA5.LARGE32",
+    "image_id": "img-xxxxxx",
+    "key_id": "skey-xxxxxx",
+    "max_price": "1000"
+}
